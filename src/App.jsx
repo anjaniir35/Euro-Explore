@@ -27,7 +27,7 @@ const destinations = [
     country: "Germany",
     description: "Experience Bavarian culture, historic buildings, parks, and local food.",
     image:
-      "https://images.unsplash.com/photo-1595867818082-083862f3d0a8?auto=format&fit=crop&w=800&q=80",
+      "https://goway-cms-files.s3.ca-central-1.amazonaws.com/production/wordpress_images/Aerial-view-of-Marienplatz-Town-Hall-and-Frauenkirche-in-Munich-Germany-_348837170.jpg",
   },
   {
     city: "Geneva",
@@ -62,7 +62,7 @@ const destinations = [
     country: "Belgium",
     description: "See historic architecture, enjoy Belgian chocolate, and explore the Grand Place.",
     image:
-      "https://images.unsplash.com/photo-1559113202-c916b8e4432a?auto=format&fit=crop&w=800&q=80",
+      "https://images.locationscout.net/2024/04/aerial-view-of-grand-place-brussels-belgium-8civ.webp?h=1400&q=80",
   },
   {
     city: "Lisbon",
