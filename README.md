@@ -23,6 +23,6 @@ The following **required** functionality is completed:
 
 Here's a walkthrough of implemented required features:
 
-<img src='https://i.imgur.com/DYsm5FR.gif' title='Video Walkthrough' width='800' alt='Video Walkthrough' />
+![Video Walkthrough](https://i.imgur.com/DYsm5FR.gif)
 
 GIF created with ScreenToGif for Windows.
