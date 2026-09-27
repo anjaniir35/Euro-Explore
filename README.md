@@ -23,6 +23,6 @@ The following **required** functionality is completed:
 
 Here's a walkthrough of implemented required features:
 
-![Video Walkthrough](https://i.imgur.com/DYsm5FR.gif)
+Video Walkthrough: https://i.imgur.com/DYsm5FR.gif
 
 GIF created with ScreenToGif for Windows.
