@@ -34,9 +34,9 @@ The following **additional** features are implemented:
 
 Here's a walkthrough of implemented required features:
 
-<img src='https://imgur.com/a/OU4zEGF' title='Video Walkthrough' width='' alt='Video Walkthrough' />
+[Video Walkthrough](https://imgur.com/a/OU4zEGF)
 
-GIF created with ScreenToGif for Windows.
+Video created with ScreenToGif for Windows.
 
 ## Notes
 
