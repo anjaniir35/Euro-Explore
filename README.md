@@ -2,37 +2,44 @@
 
 The following **required** functionality is completed:
 
+- [x] **The user can enter their guess into an input box *before* seeing the flipside of the card**
+  - [x] Application features a clearly labeled input box with a submit button where users can type in a guess
+  - [x] Clicking on the submit button with an **incorrect** answer shows visual feedback that it is wrong
+  - [x] Clicking on the submit button with a **correct** answer shows visual feedback that it is correct
 
-- [x] **The app displays the title of the card set, a short description, and the total number of cards**
-  - [x] Title of card set is displayed 
-  - [x] A short description of the card set is displayed 
-  - [x] A list of card pairs is created
-  - [x] The total number of cards in the set is displayed 
-  - [x] Card set is represented as a list of card pairs
-- [x] **A single card at a time is displayed**
-  - [x] Only one half of the information pair is displayed at a time
-- [x] **Clicking on the card flips the card over, showing the corresponding component of the information pair**
-  - [x] Clicking on a card flips it over, showing the back with corresponding information 
-  - [x] Clicking on a flipped card again flips it back, showing the front
-- [x] **Clicking on the next button displays a random new card**
+- [x] **The user can navigate through an ordered list of cards**
+  - [x] A forward/next button displayed on the card navigates to the next card in a set sequence when clicked
+  - [x] A previous/back button displayed on the card returns to the previous card in the set sequence when clicked
+  - [x] Both the next and back buttons have a visual indication that the user is at the beginning or end of the list, and wrap-around navigation is not allowed
 
 The following **optional** features are implemented:
 
-- [x] Cards contain images in addition to or in place of text
-  - [x] Some or all cards have images in place of or in addition to text
-- [ ] Cards have different visual styles such as color based on their category
-  - Example categories you can use:
-    - Difficulty: Easy/medium/hard
-    - Subject: Biology/Chemistry/Physics/Earth science
+- [x] Users can use a shuffle button to randomize the order of the cards
+  - [x] Cards remain in the same sequence unless the shuffle button is clicked
+  - [x] Cards change to a random sequence once the shuffle button is clicked
+
+- [x] A user’s answer may be counted as correct even when it is slightly different from the target answer
+  - [x] Answers are considered correct when uppercase/lowercase differences are ignored
+  - [x] Answers are considered correct when punctuation differences are ignored
+
+- [ ] A counter displays the user’s current and longest streak of correct responses
+  - The current counter increments when a user guesses an answer correctly
+  - The current counter resets to 0 when a user guesses an answer incorrectly
+  - A separate counter tracks the longest streak, updating if the value of the current streak counter exceeds the value of the longest streak counter
+
+- [ ] A user can mark a card that they have mastered and have it removed from the pool of displayed cards
+  - The user can mark a card to indicate that it has been mastered
+  - Mastered cards are removed from the pool of displayed cards and added to a list of mastered cards
 
 The following **additional** features are implemented:
 
-* [x] Cards have a flip animation when switching between the question and answer
-* [x] The app is responsive for different screen sizes
+- [x] Cards have a flip animation when switching between the question and answer
+- [x] Cards contain images related to each capital city
+- [x] The app is responsive for different screen sizes
 
 ## Video Walkthrough
 
-Here's a walkthrough of implemented required features:
+Here's a walkthrough of implemented user stories:
 
 [Video Walkthrough](https://imgur.com/a/OU4zEGF)
 
@@ -40,19 +47,22 @@ Video created with ScreenToGif for Windows.
 
 ## Notes
 
-One challenge was creating the card flip animation while making sure the question and answer displayed correctly. Another challenge was making the layout responsive for different screen sizes.
+One challenge was adding the guessing feature while making sure users could submit an answer before seeing the back of the card. Another challenge was adding ordered navigation and shuffle functionality while keeping the card flip animation working correctly.
 
 ## License
-Copyright 2026 Anjani
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+    Copyright 2026 Anjani
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
+    See the License for the specific language governing permissions and
+    limitations under the License.

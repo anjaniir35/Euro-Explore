@@ -100,10 +100,11 @@ header p {
 
 /* Tablet */
 
-@media (max-width: 1000px) 
+@media (max-width: 1000px) {
   header h1 {
     font-size: 40px;
   }
+}
 
 /* Phone */
 
@@ -119,4 +120,19 @@ header p {
   header p {
     font-size: 16px;
   }
+}
+
+.correct {
+  color: green;
+  font-weight: bold;
+}
+
+.incorrect {
+  color: red;
+  font-weight: bold;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
