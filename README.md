@@ -2,67 +2,69 @@
 
 The following **required** functionality is completed:
 
-- [x] **The user can enter their guess into an input box *before* seeing the flipside of the card**
-  - [x] Application features a clearly labeled input box with a submit button where users can type in a guess
-  - [x] Clicking on the submit button with an **incorrect** answer shows visual feedback that it is wrong
-  - [x] Clicking on the submit button with a **correct** answer shows visual feedback that it is correct
+- [x] **Application features a button that creates a new API fetch request on click and displays at least three attributes and an image obtained from the returned JSON data**
+  - The Discover a City button fetches information from the Wikipedia REST API.
+  - The app displays the city title, description, summary, and a thumbnail image returned by the API.
+  - The same types of attributes are displayed for each successful result.
 
-- [x] **The user can navigate through an ordered list of cards**
-  - [x] A forward/next button displayed on the card navigates to the next card in a set sequence when clicked
-  - [x] A previous/back button displayed on the card returns to the previous card in the set sequence when clicked
-  - [x] Both the next and back buttons have a visual indication that the user is at the beginning or end of the list, and wrap-around navigation is not allowed
+- [x] **Only one item/data from API call response is viewable at a time and at least one image is displayed per API call**
+  - The app displays one discovered city at a time.
+  - The city information and image are taken from the same Wikipedia API response.
+  - The app skips results that do not include the required information and a thumbnail image.
+
+- [x] **API call response results should appear random to the user**
+  - Clicking Discover a City shuffles the eligible city list and requests information for a randomly selected city.
+  - The current city list contains 10 European destinations, so repeated results may occur.
+
+- [x] **Clicking on a displayed value for one attribute adds it to a displayed ban list**
+  - The country and region values are clickable.
+  - Clicking an unbanned country or region adds it to the ban list.
+  - Clicking a value in the ban list removes it.
+
+- [x] **Attributes on the ban list prevent further images/API results with that attribute from being displayed**
+  - The app filters out cities whose country or region is on the ban list before requesting a new result.
+  - The ban list can be updated by removing values.
+
+- [x] **Recording demonstrates removing a banned attribute**
+  - Include a recording showing that clicking an attribute in the ban list removes it.
 
 The following **optional** features are implemented:
 
-- [x] Users can use a shuffle button to randomize the order of the cards
-  - [x] Cards remain in the same sequence unless the shuffle button is clicked
-  - [x] Cards change to a random sequence once the shuffle button is clicked
-
-- [x] A user’s answer may be counted as correct even when it is slightly different from the target answer
-  - [x] Answers are considered correct when uppercase/lowercase differences are ignored
-  - [x] Answers are considered correct when punctuation differences are ignored
-
-- [ ] A counter displays the user’s current and longest streak of correct responses
-  - The current counter increments when a user guesses an answer correctly
-  - The current counter resets to 0 when a user guesses an answer incorrectly
-  - A separate counter tracks the longest streak, updating if the value of the current streak counter exceeds the value of the longest streak counter
-
-- [ ] A user can mark a card that they have mastered and have it removed from the pool of displayed cards
-  - The user can mark a card to indicate that it has been mastered
-  - Mastered cards are removed from the pool of displayed cards and added to a list of mastered cards
+- [x] Multiple types of attributes are clickable and can be added to the ban list (country and region).
+- [ ] Users can see a stored history of their previously displayed results from this session.
+  - The current history lists previously discovered city names. To fully meet this stretch feature, update the history to display each previous city's image and attributes.
 
 The following **additional** features are implemented:
 
-- [x] Cards have a flip animation when switching between the question and answer
-- [x] Cards contain images related to each capital city
-- [x] The app is responsive for different screen sizes
+- [x] Loading indicator while a city is being fetched.
+- [x] Error messages for failed requests or when no eligible city with complete information can be found.
+- [x] Responsive layout for smaller screens.
+- [x] Consistent teal-and-blue visual theme.
 
 ## Video Walkthrough
 
 Here's a walkthrough of implemented user stories:
 
-[Video Walkthrough](https://imgur.com/a/H312wEl)
+<img src="" title="Video Walkthrough" width="800" alt="Video Walkthrough" />
 
-Video created with ScreenToGif for Windows.
+GIF created with **ScreenToGif** for Windows.
 
 ## Notes
 
-One challenge was adding the guessing feature while making sure users could submit an answer before seeing the back of the card. Another challenge was adding ordered navigation and shuffle functionality while keeping the card flip animation working correctly.
+One challenge was adapting the original city flashcard project into a random discovery app while preserving its European travel theme and existing city image URLs. Another challenge was handling asynchronous API requests and filtering eligible cities based on the user's ban list. Wikipedia responses can vary, so the app checks that the required fields and thumbnail are available before displaying a result.
 
 ## License
 
-    Copyright 2026 Anjani
+Copyright 2026 Anjani
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-
-    See the License for the specific language governing permissions and
-    limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
