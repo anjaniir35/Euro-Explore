@@ -1,5 +1,3 @@
-git add README.md## Required Features
-
 The following **required** functionality is completed:
 
 - [x] **Application features a button that creates a new API fetch request on click and displays at least three attributes and an image obtained from the returned JSON data**
