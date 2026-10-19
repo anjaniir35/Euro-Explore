@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 const cities = [
@@ -240,6 +240,245 @@ function App() {
       </main>
     </div>
   );
+
+{
+name: "London",
+country: "United Kingdom",
+region: "Northern Europe",
+image:
+"https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=800&q=80",
+},
+{
+name: "Paris",
+country: "France",
+region: "Western Europe",
+image:
+"https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=800&q=80",
+},
+{
+name: "Amsterdam",
+country: "Netherlands",
+region: "Western Europe",
+image:
+"https://images.unsplash.com/photo-1534351590666-13e3e96b5017?auto=format&fit=crop&w=800&q=80",
+},
+{
+name: "Berlin",
+country: "Germany",
+region: "Central Europe",
+image:
+"https://goway-cms-files.s3.ca-central-1.amazonaws.com/production/wordpress_images/Aerial-view-of-Marienplatz-Town-Hall-and-Frauenkirche-in-Munich-Germany-_348837170.jpg",
+},
+{
+name: "Bern",
+country: "Switzerland",
+region: "Central Europe",
+image:
+"https://images.unsplash.com/photo-1527668752968-14dc70a27c95?auto=format&fit=crop&w=800&q=80",
+},
+{
+name: "Rome",
+country: "Italy",
+region: "Southern Europe",
+image:
+"https://images.unsplash.com/photo-1529260830199-42c24126f198?auto=format&fit=crop&w=800&q=80",
+},
+{
+name: "Madrid",
+country: "Spain",
+region: "Southern Europe",
+image:
+"https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=800&q=80",
+},
+{
+name: "Vienna",
+country: "Austria",
+region: "Central Europe",
+image:
+"https://images.unsplash.com/photo-1516550893923-42d28e5677af?auto=format&fit=crop&w=800&q=80",
+},
+{
+name: "Brussels",
+country: "Belgium",
+region: "Western Europe",
+image:
+"https://images.locationscout.net/2024/04/aerial-view-of-grand-place-brussels-belgium-8civ.webp?h=1400&q=80",
+},
+{
+name: "Lisbon",
+country: "Portugal",
+region: "Southern Europe",
+image:
+"https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=800&q=80",
+},
+];
+
+function App() {
+const [cityData, setCityData] = useState([]);
+const [search, setSearch] = useState("");
+const [selectedRegion, setSelectedRegion] = useState("All regions");
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
+
+useEffect(() => {
+const fetchCities = async () => {
+try {
+setLoading(true);
+setError("");
+
+    const results = await Promise.all(
+      cities.map(async (city) => {
+        const response = await fetch(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(city.name)}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Could not load ${city.name}`);
+        }
+
+        const data = await response.json();
+
+        return {
+          ...city,
+          description: data.description || city.country,
+          summary: data.extract || "No summary available.",
+        };
+      })
+    );
+
+    setCityData(results);
+  } catch {
+    setError(
+      "Couldn't load the city information. Please check your connection and refresh the page."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+fetchCities();
+
+}, []);
+
+const regions = [
+"All regions",
+...new Set(cities.map((city) => city.region)),
+];
+
+const filteredCities = cityData.filter((city) => {
+const matchesSearch = city.name
+.toLowerCase()
+.includes(search.toLowerCase());
+
+const matchesRegion =
+  selectedRegion === "All regions" || city.region === selectedRegion;
+
+return matchesSearch && matchesRegion;
+
+});
+
+const totalCities = cityData.length;
+const totalCountries = new Set(cityData.map((city) => city.country)).size;
+const totalRegions = new Set(cityData.map((city) => city.region)).size;
+
+return (
+<div className="app">
+<header>
+<h1>Western Europe Vacation Cities</h1>
+<p>Explore European destinations and find your next vacation!</p>
+</header>
+
+  <main>
+    <section className="stats-grid">
+      <article className="stat-card">
+        <h2>Total Cities</h2>
+        <p className="stat-number">{totalCities}</p>
+      </article>
+
+      <article className="stat-card">
+        <h2>Countries</h2>
+        <p className="stat-number">{totalCountries}</p>
+      </article>
+
+      <article className="stat-card">
+        <h2>European Regions</h2>
+        <p className="stat-number">{totalRegions}</p>
+      </article>
+    </section>
+
+    <section className="dashboard-section">
+      <h2>Explore Destinations</h2>
+      <p>Search for a city or filter destinations by region.</p>
+
+      <div className="filter-controls">
+        <input
+          type="text"
+          placeholder="Search cities..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          aria-label="Search cities by name"
+        />
+
+        <select
+          value={selectedRegion}
+          onChange={(event) => setSelectedRegion(event.target.value)}
+          aria-label="Filter cities by region"
+        >
+          {regions.map((region) => (
+            <option key={region} value={region}>
+              {region}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {loading && <p>Loading European destinations...</p>}
+      {error && <p className="incorrect">{error}</p>}
+
+      {!loading && !error && (
+        <>
+          <p className="results-count">
+            Showing {filteredCities.length} of {totalCities} cities
+          </p>
+
+          <div className="city-list">
+            {filteredCities.map((city) => (
+              <article className="city-row" key={city.name}>
+                <img src={city.image} alt={city.name} />
+
+                <div className="city-details">
+                  <h3>{city.name}</h3>
+                  <p>
+                    <strong>Country:</strong> {city.country}
+                  </p>
+                  <p>
+                    <strong>Region:</strong> {city.region}
+                  </p>
+                  <p>
+                    <strong>About:</strong> {city.summary}
+                  </p>
+                  <a
+                    href={`https://en.wikipedia.org/wiki/${encodeURIComponent(city.name)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Learn more on Wikipedia
+                  </a>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {filteredCities.length === 0 && (
+            <p>No cities match your search and selected region.</p>
+          )}
+        </>
+      )}
+    </section>
+  </main>
+</div>
+
+);
 }
 
 export default App;
