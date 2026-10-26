@@ -2,31 +2,33 @@
 
 The following **required** functionality is completed:
 
-- [x] **The site has a dashboard displaying a list of data fetched using an API call**
-  - The dashboard should display at least 10 unique items, one per row
-  - The dashboard includes at least two features in each row
-- [x] **`useEffect` React hook and `async`/`await` are used**
-- [x] **The app dashboard includes at least three summary statistics about the data**
-  - The app dashboard includes at least three summary statistics about the data, such as:
-    - The total number of cities, countries, and European regions.
-- [x] **A search bar allows the user to search for an item in the fetched data**
-  - The search bar **correctly** filters items in the list, only displaying items matching the search query
-  - The list of results dynamically updates as the user types into the search bar
-- [x] **An additional filter allows the user to restrict displayed items by specified categories**
-  - The filter restricts items in the list using a **different attribute** than the search bar
-  - The filter **correctly** filters items in the list, only displaying items matching the filter attribute in the dashboard
-  - The dashboard list dynamically updates as the user adjusts the filter
+- [x] **Clicking on an item in the list view displays more details about it**
+  - [x] Clicking on an item in the dashboard list navigates to a detail view for that item
+  - [x] Detail view includes extra information about the item not included in the dashboard view
+  - [x] The same sidebar is displayed in detail view as in dashboard view
+  - [x] The sidebar is viewable when showing the details view
+- [x] **Each detail view of an item has a direct, unique URL link to that item's detail view page**
+  - [x] Each city has its own URL, such as `/cities/london`
+  - [x] The URL/address bar is viewable when showing a detail page
+- [x] **The app includes at least two unique charts developed using the fetched data that tell an interesting story**
+  - [x] At least two charts are incorporated into the dashboard view of the site
+  - [x] Each chart describes a different aspect of the dataset
 
 The following **optional** features are implemented:
 
-- [x] Multiple filters can be applied simultaneously
-- [x] Filters use different input types
-  - e.g., as a text input, a dropdown or radio selection, and/or a slider
-- [ ] The user can enter specific bounds for filter values
+- [x] The site's customized dashboard contains more content that explains what is interesting about the data
+  - [x] Additional descriptions, graph annotations, or suggestions for exploring the data
+- [ ] The site allows users to toggle between different data visualizations
+  - [ ] Users can toggle between displaying and hiding visualizations
 
 The following **additional** features are implemented:
 
-* [x] Additional destination information, images, Wikipedia links, and summary statistics.
+- [x] Search and filter functionality for exploring cities
+- [x] Dashboard summary statistics
+- [x] Additional destination information, images, and Wikipedia links
+- [x] City detail pages with unique URLs
+- [x] Charts displaying city distribution by region and Wikipedia summary length
+
 
 ## Video Walkthrough
 
@@ -34,9 +36,11 @@ Here's a walkthrough of implemented user stories:
 
 <img src='' title='Video Walkthrough' width='' alt='Video Walkthrough' />
 
+
 ## Notes
 
-Describe any challenges encountered while building the app.
+The project uses React Router to navigate between the dashboard and individual city detail pages. Wikipedia's API provides additional information about each destination. The dashboard includes charts and summary statistics to help users explore Western European cities.
+
 
 ## License
 
