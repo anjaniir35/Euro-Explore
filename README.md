@@ -23,7 +23,7 @@ The following **required** functionality is completed:
 
 The following **optional** features are implemented:
 
-- [] Cities can be assigned categories that restrict the available attribute options
+- [ ] Cities can be assigned categories that restrict the available attribute options
 - [x] The dashboard displays summary statistics about the saved destinations, including interactive charts
 - [ ] The dashboard includes a custom success metric that changes the appearance of the city list
 
