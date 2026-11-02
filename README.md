@@ -2,33 +2,46 @@
 
 The following **required** functionality is completed:
 
-- [x] **Clicking on an item in the list view displays more details about it**
-  - [x] Clicking on an item in the dashboard list navigates to a detail view for that item
-  - [x] Detail view includes extra information about the item not included in the dashboard view
-  - [x] The same sidebar is displayed in detail view as in dashboard view
-  - [x] The sidebar is viewable when showing the details view
-- [x] **Each detail view of an item has a direct, unique URL link to that item's detail view page**
-  - [x] Each city has its own URL, such as `/cities/london`
-  - [x] The URL/address bar is viewable when showing a detail page
-- [x] **The app includes at least two unique charts developed using the fetched data that tell an interesting story**
-  - [x] At least two charts are incorporated into the dashboard view of the site
-  - [x] Each chart describes a different aspect of the dataset
+
+- [x] **The web app contains a page that features a create form to add a new crewmate**
+  - Users can name the crewmate
+  - Users can set the crewmate’s attributes by clicking on one of several values
+- [x] **The web app includes a summary page of all the user’s added crewmatese**
+  -  The web app contains a summary page dedicated to displaying all the crewmates the user has made so far
+  -  The summary page is sorted by creation date such that the most recently created crewmates appear at the top
+- [x] **A previously created crewmate can be updated from the list of crewmates in the summary page**
+  - Each crewmate has an edit button that will take users to an update form for the relevant crewmate
+  - Users can see the current attributes of their crewmate on the update form
+  - After editing the crewmate's attribute values using the form, the user can immediately see those changes reflected in the update form and on the summary page 
+- [x] **A previously created crewmate can be deleted from the crewmate list**
+  - Using the edit form detailed in the previous _crewmates can be updated_ feature, there is a button that allows users to delete that crewmate
+  - After deleting a crewmate, the crewmate should no longer be visible in the summary page
+  - [x] **Each crewmate has a direct, unique URL link to an info page about them**
+    - Clicking on a crewmate in the summary page navigates to a detail page for that crewmate
+    - The detail page contains extra information about the crewmate not included in the summary page
+    - Users can navigate to to the edit form from the detail page
 
 The following **optional** features are implemented:
 
-- [x] The site's customized dashboard contains more content that explains what is interesting about the data
-  - [x] Additional descriptions, graph annotations, or suggestions for exploring the data
-- [ ] The site allows users to toggle between different data visualizations
-  - [ ] Users can toggle between displaying and hiding visualizations
+- [] A crewmate can be given a category upon creation which restricts their attribute value options
+  - e.g., a Dungeons and Dragons class or a development team role (project manager, product owner, etc.)
+  - User can choose a `category` option to describe their crewmate before any attributes are specified
+  - Based on the category value, users are allowed to access only a subset of the possible attributes
+- [x] A section of the summary page, displays summary statistics about a user’s crew on their crew page
+  - e.g., the percent of members with a certain attribute 
+- [ ] The summary page displays a custom “success” metric about a user’s crew which changes the look of the crewmate list
+  - e.g., a pirate crew’s predicted success at commandeering a new galley
+
 
 The following **additional** features are implemented:
 
-- [x] Search and filter functionality for exploring cities
-- [x] Dashboard summary statistics
-- [x] Additional destination information, images, and Wikipedia links
-- [x] City detail pages with unique URLs
-- [x] Charts displaying city distribution by region and Wikipedia summary length
-
+* [x] Search and filter cities by name and region.
+  [x] Interactive charts and dashboard statistics.
+  [x] Wikipedia API integration for city information.
+  [x] Related city recommendations.
+  [x] Responsive design for different screen sizes.
+  [x] Supabase database integration for storing city information.
+  [x] Add, edit, and delete city functionality.
 
 ## Video Walkthrough
 
@@ -36,24 +49,22 @@ Here's a walkthrough of implemented user stories:
 
 <img src='' title='Video Walkthrough' width='' alt='Video Walkthrough' />
 
-
 ## Notes
 
-The project uses React Router to navigate between the dashboard and individual city detail pages. Wikipedia's API provides additional information about each destination. The dashboard includes charts and summary statistics to help users explore Western European cities.
-
+Describe any challenges encountered while building the app.
 
 ## License
 
-   Copyright 2026 Anjani
+    Copyright 2026 Anjani
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+        http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.

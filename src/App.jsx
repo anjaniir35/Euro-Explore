@@ -1,96 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BrowserRouter,
   Routes,
   Route,
   Link,
+  useNavigate,
   useParams,
 } from "react-router-dom";
+import { supabase } from "./supabase";
 import "./App.css";
 
-const cities = [
-  {
-    name: "London",
-    country: "United Kingdom",
-    region: "Northern Europe",
-    image:
-      "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Paris",
-    country: "France",
-    region: "Western Europe",
-    image:
-      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Amsterdam",
-    country: "Netherlands",
-    region: "Western Europe",
-    image:
-      "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Berlin",
-    country: "Germany",
-    region: "Central Europe",
-    image:
-      "https://images.unsplash.com/photo-1560969184-10fe8719e047?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Bern",
-    country: "Switzerland",
-    region: "Central Europe",
-    image:
-      "https://images.unsplash.com/photo-1527668752968-14dc70a27c95?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Rome",
-    country: "Italy",
-    region: "Southern Europe",
-    image:
-      "https://images.unsplash.com/photo-1529260830199-42c24126f198?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Madrid",
-    country: "Spain",
-    region: "Southern Europe",
-    image:
-      "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Vienna",
-    country: "Austria",
-    region: "Central Europe",
-    image:
-      "https://images.unsplash.com/photo-1516550893923-42d28e5677af?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Brussels",
-    country: "Belgium",
-    region: "Western Europe",
-    image:
-      "https://media.traveler.es/photos/61377ff8bf63e581e01026f7/master/w_1024%2Cc_limit/23583.jpg",
-  },
-  {
-    name: "Lisbon",
-    country: "Portugal",
-    region: "Southern Europe",
-    image:
-      "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=800&q=80",
-  },
-];
+const fallbackImage =
+  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=800&q=80";
 
-const regions = [
-  "All Regions",
-  ...new Set(cities.map((city) => city.region)),
-];
+const getWikipediaUrl = (cityName) =>
+  `https://en.wikipedia.org/wiki/${encodeURIComponent(cityName)}`;
 
-function getWikipediaUrl(cityName) {
-  return `https://en.wikipedia.org/wiki/${encodeURIComponent(cityName)}`;
+async function addWikipediaInformation(cities) {
+  return Promise.all(
+    cities.map(async (city) => {
+      try {
+        const response = await fetch(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(city.name)}`
+        );
+
+        if (!response.ok) throw new Error("Wikipedia unavailable");
+
+        const data = await response.json();
+
+        return {
+          ...city,
+          description: data.description || "",
+          summary: data.extract || "",
+          wikipediaUrl:
+            data.content_urls?.desktop?.page || getWikipediaUrl(city.name),
+        };
+      } catch {
+        return {
+          ...city,
+          description: "",
+          summary: "",
+          wikipediaUrl: getWikipediaUrl(city.name),
+        };
+      }
+    })
+  );
 }
 
-function Sidebar() {
+// SIDEBAR
+
+function Sidebar({ cityData }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -103,12 +62,16 @@ function Sidebar() {
           Dashboard
         </Link>
 
+        <Link to="/add" className="sidebar-link">
+          + Add a City
+        </Link>
+
         <p className="sidebar-label">DESTINATIONS</p>
 
-        {cities.map((city) => (
+        {cityData.map((city) => (
           <Link
-            key={city.name}
-            to={`/cities/${city.name.toLowerCase()}`}
+            key={city.id}
+            to={`/cities/${city.id}`}
             className="sidebar-link"
           >
             {city.name}
@@ -119,10 +82,12 @@ function Sidebar() {
   );
 }
 
-function AppLayout({ cityData, loading, error }) {
+// MAIN LAYOUT
+
+function AppLayout({ cityData, loading, error, refreshCities }) {
   return (
     <div className="app-layout">
-      <Sidebar />
+      <Sidebar cityData={cityData} />
 
       <main className="main-content">
         <Routes>
@@ -138,16 +103,36 @@ function AppLayout({ cityData, loading, error }) {
           />
 
           <Route
-            path="/cities/:cityName"
+            path="/add"
+            element={
+              <CityForm
+                title="Add a New City"
+                refreshCities={refreshCities}
+              />
+            }
+          />
+
+          <Route
+            path="/cities/:cityId"
             element={<CityDetail cityData={cityData} loading={loading} />}
+          />
+
+          <Route
+            path="/cities/:cityId/edit"
+            element={
+              <EditCity
+                cityData={cityData}
+                loading={loading}
+                refreshCities={refreshCities}
+              />
+            }
           />
 
           <Route
             path="*"
             element={
-              <section className="detail-page">
+              <section className="detail-page page-content">
                 <h1>Page Not Found</h1>
-                <p>Sorry, that page doesn't exist.</p>
                 <Link to="/" className="back-link">
                   Back to Dashboard
                 </Link>
@@ -160,29 +145,36 @@ function AppLayout({ cityData, loading, error }) {
   );
 }
 
+// DASHBOARD
+
 function Dashboard({ cityData, loading, error }) {
   const [search, setSearch] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
 
-  const filteredCities = useMemo(() => {
-    return cityData.filter((city) => {
-      const matchesSearch =
-        city.name.toLowerCase().includes(search.toLowerCase()) ||
-        city.country.toLowerCase().includes(search.toLowerCase());
+  const regions = useMemo(
+    () => [
+      "All Regions",
+      ...new Set(cityData.map((city) => city.region)),
+    ],
+    [cityData]
+  );
 
-      const matchesRegion =
-        selectedRegion === "All Regions" ||
-        city.region === selectedRegion;
+  const filteredCities = cityData.filter((city) => {
+    const matchesSearch =
+      city.name.toLowerCase().includes(search.toLowerCase()) ||
+      city.country.toLowerCase().includes(search.toLowerCase());
 
-      return matchesSearch && matchesRegion;
-    });
-  }, [cityData, search, selectedRegion]);
+    const matchesRegion =
+      selectedRegion === "All Regions" ||
+      city.region === selectedRegion;
+
+    return matchesSearch && matchesRegion;
+  });
 
   const totalCities = cityData.length;
   const totalCountries = new Set(cityData.map((city) => city.country)).size;
   const totalRegions = new Set(cityData.map((city) => city.region)).size;
 
-  // Count the destinations in each region.
   const regionCounts = regions
     .filter((region) => region !== "All Regions")
     .map((region) => ({
@@ -195,7 +187,6 @@ function Dashboard({ cityData, loading, error }) {
     1
   );
 
-  // Calculate word counts from the summaries fetched from Wikipedia.
   const summaryData = cityData
     .filter((city) => city.summary)
     .map((city) => ({
@@ -211,12 +202,18 @@ function Dashboard({ cityData, loading, error }) {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <p className="eyebrow">YOUR EUROPEAN TRAVEL GUIDE</p>
-        <h1>Western Europe Vacation Cities</h1>
-        <p>
-          Explore European destinations, discover interesting places, and
-          find inspiration for your next vacation.
-        </p>
+        <div>
+          <p className="eyebrow">YOUR EUROPEAN TRAVEL GUIDE</p>
+          <h1>Western Europe Vacation Cities</h1>
+          <p>
+            Explore European destinations, discover interesting places, and
+            find inspiration for your next vacation.
+          </p>
+        </div>
+
+        <Link to="/add" className="primary-button">
+          + Add a City
+        </Link>
       </header>
 
       <section className="stats-grid">
@@ -248,18 +245,15 @@ function Dashboard({ cityData, loading, error }) {
         <div className="charts-grid">
           <article className="chart-card">
             <h3>Cities by Region</h3>
-
             <p className="chart-description">
               Explore how the destinations are distributed across different
-              European regions. This comparison highlights which regions have
-              the most cities in this collection.
+              European regions.
             </p>
 
             <div className="bar-chart">
               {regionCounts.map((region) => (
                 <div className="bar-row" key={region.name}>
                   <span className="bar-label">{region.name}</span>
-
                   <div className="bar-track">
                     <div
                       className="bar-fill"
@@ -268,7 +262,6 @@ function Dashboard({ cityData, loading, error }) {
                       }}
                     />
                   </div>
-
                   <span className="bar-value">{region.count}</span>
                 </div>
               ))}
@@ -277,12 +270,8 @@ function Dashboard({ cityData, loading, error }) {
 
           <article className="chart-card">
             <h3>Wikipedia Summary Length</h3>
-
             <p className="chart-description">
-              Compare the number of words in each city's fetched Wikipedia
-              summary. Longer summaries contain more text, but this does not
-              necessarily mean a city has more attractions or is a better
-              vacation destination.
+              Compare the number of words in each city's Wikipedia summary.
             </p>
 
             {loading && <p>Loading summary data...</p>}
@@ -296,7 +285,6 @@ function Dashboard({ cityData, loading, error }) {
                 {summaryData.map((city) => (
                   <div className="bar-row" key={city.name}>
                     <span className="bar-label">{city.name}</span>
-
                     <div className="bar-track">
                       <div
                         className="bar-fill"
@@ -305,7 +293,6 @@ function Dashboard({ cityData, loading, error }) {
                         }}
                       />
                     </div>
-
                     <span className="bar-value">{city.wordCount}</span>
                   </div>
                 ))}
@@ -354,29 +341,33 @@ function Dashboard({ cityData, loading, error }) {
           </button>
         </div>
 
-        {loading && <p>Loading European destinations...</p>}
-
         {error && <p className="error-message">{error}</p>}
+
+        {loading && <p>Loading European destinations...</p>}
 
         {!loading && (
           <>
             <p className="results-count">
               Showing {filteredCities.length} of {totalCities} cities
+              <span> · Sorted newest first</span>
             </p>
 
             <div className="city-grid">
               {filteredCities.map((city) => (
                 <Link
-                  to={`/cities/${city.name.toLowerCase()}`}
+                  to={`/cities/${city.id}`}
                   className="city-card"
-                  key={city.name}
+                  key={city.id}
                 >
-                  <img src={city.image} alt={city.name} />
+                  <img
+                    className="city-card-image"
+                    src={city.image || fallbackImage}
+                    alt={city.name}
+                  />
 
                   <div className="city-card-content">
                     <h3>{city.name}</h3>
                     <p>{city.country}</p>
-
                     <span className="region-badge">{city.region}</span>
 
                     {city.description && (
@@ -391,8 +382,7 @@ function Dashboard({ cityData, loading, error }) {
 
             {filteredCities.length === 0 && (
               <p className="empty-message">
-                No cities match your search and selected region. Try changing
-                your search or resetting the filters.
+                No cities match your search. Try changing your filters.
               </p>
             )}
           </>
@@ -402,29 +392,211 @@ function Dashboard({ cityData, loading, error }) {
   );
 }
 
-function CityDetail({ cityData, loading }) {
-  const { cityName } = useParams();
+// ADD CITY FORM
 
-  const city = cityData.find(
-    (item) => item.name.toLowerCase() === cityName?.toLowerCase()
+function CityForm({ title, refreshCities, existingCity }) {
+  const navigate = useNavigate();
+
+  const [name, setName] = useState(existingCity?.name || "");
+  const [country, setCountry] = useState(existingCity?.country || "");
+  const [region, setRegion] = useState(existingCity?.region || "");
+  const [image, setImage] = useState(existingCity?.image || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+
+    const city = {
+      name: name.trim(),
+      country: country.trim(),
+      region,
+      image: image.trim() || fallbackImage,
+    };
+
+    let result;
+
+    if (existingCity) {
+      result = await supabase
+        .from("cities")
+        .update(city)
+        .eq("id", existingCity.id)
+        .select()
+        .single();
+    } else {
+      result = await supabase
+        .from("cities")
+        .insert([city])
+        .select()
+        .single();
+    }
+
+    if (result.error) {
+      setError(result.error.message);
+      setSaving(false);
+      return;
+    }
+
+    await refreshCities();
+    navigate(`/cities/${result.data.id}`);
+  }
+
+  return (
+    <div className="page-content">
+      <Link
+        to={existingCity ? `/cities/${existingCity.id}` : "/"}
+        className="back-link"
+      >
+        ← Back
+      </Link>
+
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">EUROEXPLORE DESTINATIONS</p>
+          <h1>{title}</h1>
+          <p className="page-subtitle">
+            {existingCity
+              ? "Update the information for this destination."
+              : "Add a new European destination to your collection."}
+          </p>
+        </div>
+      </header>
+
+      <form className="city-form" onSubmit={handleSubmit}>
+        <label htmlFor="city-name">City Name</label>
+        <input
+          id="city-name"
+          type="text"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="e.g. Prague"
+          required
+        />
+
+        <label htmlFor="city-country">Country</label>
+        <input
+          id="city-country"
+          type="text"
+          value={country}
+          onChange={(event) => setCountry(event.target.value)}
+          placeholder="e.g. Czech Republic"
+          required
+        />
+
+        <label htmlFor="city-region">European Region</label>
+        <select
+          id="city-region"
+          value={region}
+          onChange={(event) => setRegion(event.target.value)}
+          required
+        >
+          <option value="">Select a region</option>
+          <option value="Northern Europe">Northern Europe</option>
+          <option value="Western Europe">Western Europe</option>
+          <option value="Central Europe">Central Europe</option>
+          <option value="Southern Europe">Southern Europe</option>
+          <option value="Eastern Europe">Eastern Europe</option>
+        </select>
+
+        <label htmlFor="city-image">Image URL (optional)</label>
+        <input
+          id="city-image"
+          type="url"
+          value={image}
+          onChange={(event) => setImage(event.target.value)}
+          placeholder="https://example.com/city-image.jpg"
+        />
+
+        {error && <p className="error-message">{error}</p>}
+
+        <button
+          type="submit"
+          className="primary-button form-submit"
+          disabled={saving}
+        >
+          {saving ? "Saving..." : existingCity ? "Save Changes" : "Add City"}
+        </button>
+      </form>
+    </div>
   );
+}
+
+// EDIT CITY PAGE
+
+function EditCity({ cityData, loading, refreshCities }) {
+  const { cityId } = useParams();
+  const city = cityData.find((item) => String(item.id) === cityId);
+  const navigate = useNavigate();
+
+  async function deleteCity() {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${city.name}?`
+    );
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("cities")
+      .delete()
+      .eq("id", city.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await refreshCities();
+    navigate("/");
+  }
+
+  if (loading && !city) return <p className="page-content">Loading...</p>;
+
+  if (!city) {
+    return (
+      <div className="page-content">
+        <h1>City Not Found</h1>
+        <Link to="/" className="back-link">Back to Dashboard</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-content">
+      <CityForm
+        title={`Edit ${city.name}`}
+        existingCity={city}
+        refreshCities={refreshCities}
+      />
+
+      <div className="delete-section">
+        <h2>Delete Destination</h2>
+        <p>This will permanently remove this city from your collection.</p>
+        <button type="button" className="delete-button" onClick={deleteCity}>
+          Delete {city.name}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// CITY DETAIL PAGE
+
+function CityDetail({ cityData, loading }) {
+  const { cityId } = useParams();
+  const city = cityData.find((item) => String(item.id) === cityId);
 
   if (loading && !city) {
-    return (
-      <section className="detail-page">
-        <p>Loading city information...</p>
-      </section>
-    );
+    return <section className="detail-page page-content">Loading city information...</section>;
   }
 
   if (!city) {
     return (
-      <section className="detail-page">
+      <section className="detail-page page-content">
         <h1>City Not Found</h1>
         <p>We couldn't find that destination.</p>
-        <Link to="/" className="back-link">
-          ← Back to Dashboard
-        </Link>
+        <Link to="/" className="back-link">← Back to Dashboard</Link>
       </section>
     );
   }
@@ -434,24 +606,24 @@ function CityDetail({ cityData, loading }) {
     : 0;
 
   const relatedCities = cityData.filter(
-    (item) => item.region === city.region && item.name !== city.name
+    (item) => item.region === city.region && item.id !== city.id
   );
 
   return (
-    <div className="detail-page">
-      <Link to="/" className="back-link">
-        ← Back to Dashboard
-      </Link>
+    <div className="detail-page page-content">
+      <Link to="/" className="back-link">← Back to Dashboard</Link>
 
       <header className="detail-header">
         <p className="eyebrow">DESTINATION DETAILS</p>
         <h1>{city.name}</h1>
-        <p>
-          {city.country} · {city.region}
-        </p>
+        <p>{city.country} · {city.region}</p>
       </header>
 
-      <img className="detail-image" src={city.image} alt={city.name} />
+      <img
+        className="detail-image"
+        src={city.image || fallbackImage}
+        alt={city.name}
+      />
 
       <section className="detail-card">
         <h2>About {city.name}</h2>
@@ -464,7 +636,7 @@ function CityDetail({ cityData, loading }) {
         </p>
 
         <a
-          href={getWikipediaUrl(city.name)}
+          href={city.wikipediaUrl || getWikipediaUrl(city.name)}
           target="_blank"
           rel="noreferrer"
           className="wikipedia-link"
@@ -491,6 +663,10 @@ function CityDetail({ cityData, loading }) {
         </article>
       </section>
 
+      <Link to={`/cities/${city.id}/edit`} className="primary-button">
+        Edit Destination
+      </Link>
+
       {relatedCities.length > 0 && (
         <section className="related-section">
           <h2>Explore More in {city.region}</h2>
@@ -499,9 +675,9 @@ function CityDetail({ cityData, loading }) {
           <div className="related-cities">
             {relatedCities.map((relatedCity) => (
               <Link
-                to={`/cities/${relatedCity.name.toLowerCase()}`}
+                to={`/cities/${relatedCity.id}`}
                 className="related-city-link"
-                key={relatedCity.name}
+                key={relatedCity.id}
               >
                 {relatedCity.name} →
               </Link>
@@ -513,82 +689,46 @@ function CityDetail({ cityData, loading }) {
   );
 }
 
-function App() {
-  const [cityData, setCityData] = useState(
-    cities.map((city) => ({
-      ...city,
-      description: "",
-      summary: "",
-    }))
-  );
+// MAIN APP AND SUPABASE DATA
 
+function App() {
+  const [cityData, setCityData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshCities = useCallback(async () => {
+    setLoading(true);
+    setError("");
 
-    async function fetchCityInformation() {
-      setLoading(true);
-      setError("");
+    const { data, error: databaseError } = await supabase
+      .from("cities")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      const results = await Promise.allSettled(
-        cities.map(async (city) => {
-          const response = await fetch(
-            `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(city.name)}`
-          );
-
-          if (!response.ok) {
-            throw new Error(`Could not load ${city.name}`);
-          }
-
-          const data = await response.json();
-
-          return {
-            ...city,
-            description: data.description || "",
-            summary: data.extract || "",
-            wikipediaUrl: data.content_urls?.desktop?.page || getWikipediaUrl(city.name),
-          };
-        })
-      );
-
-      if (cancelled) return;
-
-      const fetchedCities = results.map((result, index) => {
-        if (result.status === "fulfilled") {
-          return result.value;
-        }
-
-        return {
-          ...cities[index],
-          description: "",
-          summary: "",
-          wikipediaUrl: getWikipediaUrl(cities[index].name),
-        };
-      });
-
-      setCityData(fetchedCities);
-
-      if (fetchedCities.every((city) => !city.summary)) {
-        setError(
-          "City information could not be loaded. Check your internet connection and refresh the page."
-        );
-      }
-
+    if (databaseError) {
+      setError(databaseError.message);
       setLoading(false);
+      return;
     }
 
-    fetchCityInformation();
+    const citiesWithWikipedia = await addWikipediaInformation(data || []);
 
-    return () => {
-      cancelled = true;
-    };
+    setCityData(citiesWithWikipedia);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    refreshCities();
+  }, [refreshCities]);
 
   return (
     <BrowserRouter>
-      <AppLayout cityData={cityData} loading={loading} error={error} />
+      <AppLayout
+        cityData={cityData}
+        loading={loading}
+        error={error}
+        refreshCities={refreshCities}
+      />
     </BrowserRouter>
   );
 }
