@@ -1,22 +1,83 @@
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BrowserRouter,
   Routes,
   Route,
   Link,
+  NavLink,
   useNavigate,
   useParams,
 } from "react-router-dom";
 import { supabase } from "./supabase";
 import "./App.css";
 
-const fallbackImage =
-  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=800&q=80";
+const CATEGORIES = [
+  "Discussion",
+  "Question",
+  "Opinion",
+  "Recommendation",
+  "Travel Tip",
+];
 
-const getWikipediaUrl = (cityName) =>
-  `https://en.wikipedia.org/wiki/${encodeURIComponent(cityName)}`;
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1000&q=80";
 
-async function addWikipediaInformation(cities) {
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=2000&q=85";
+
+const getWikipediaUrl = (name) =>
+  `https://en.wikipedia.org/wiki/${encodeURIComponent(name)}`;
+
+function formatDate(date) {
+  if (!date) return "Just now";
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(date));
+}
+
+function visitorName(id) {
+  return id ? `Traveler-${id.slice(0, 6).toUpperCase()}` : "Traveler";
+}
+
+function getVideoEmbed(url) {
+  if (!url) return null;
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+
+    if (host === "youtu.be") {
+      return `https://www.youtube-nocookie.com/embed/${parsed.pathname.slice(1)}`;
+    }
+
+    if (host.endsWith("youtube.com")) {
+      const id =
+        parsed.searchParams.get("v") ||
+        parsed.pathname.match(/\/(?:embed|shorts)\/([^/?]+)/)?.[1];
+
+      return id
+        ? `https://www.youtube-nocookie.com/embed/${id}`
+        : null;
+    }
+
+    if (host === "vimeo.com") {
+      const id = parsed.pathname.split("/").filter(Boolean)[0];
+
+      return id && /^\d+$/.test(id)
+        ? `https://player.vimeo.com/video/${id}`
+        : null;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+async function getWikipediaInformation(cities) {
   return Promise.all(
     cities.map(async (city) => {
       try {
@@ -24,7 +85,9 @@ async function addWikipediaInformation(cities) {
           `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(city.name)}`
         );
 
-        if (!response.ok) throw new Error("Wikipedia unavailable");
+        if (!response.ok) {
+          throw new Error("Wikipedia unavailable");
+        }
 
         const data = await response.json();
 
@@ -47,406 +110,461 @@ async function addWikipediaInformation(cities) {
   );
 }
 
-// SIDEBAR
-
-function Sidebar({ cityData }) {
+function Loading({ message = "Loading..." }) {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <h2>EuroExplore</h2>
-        <p>Discover Europe</p>
-      </div>
-
-      <nav className="sidebar-nav">
-        <Link to="/" className="sidebar-link">
-          Dashboard
-        </Link>
-
-        <Link to="/add" className="sidebar-link">
-          + Add a City
-        </Link>
-
-        <p className="sidebar-label">DESTINATIONS</p>
-
-        {cityData.map((city) => (
-          <Link
-            key={city.id}
-            to={`/cities/${city.id}`}
-            className="sidebar-link"
-          >
-            {city.name}
-          </Link>
-        ))}
-      </nav>
-    </aside>
-  );
-}
-
-// MAIN LAYOUT
-
-function AppLayout({ cityData, loading, error, refreshCities }) {
-  return (
-    <div className="app-layout">
-      <Sidebar cityData={cityData} />
-
-      <main className="main-content">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Dashboard
-                cityData={cityData}
-                loading={loading}
-                error={error}
-              />
-            }
-          />
-
-          <Route
-            path="/add"
-            element={
-              <CityForm
-                title="Add a New City"
-                refreshCities={refreshCities}
-              />
-            }
-          />
-
-          <Route
-            path="/cities/:cityId"
-            element={<CityDetail cityData={cityData} loading={loading} />}
-          />
-
-          <Route
-            path="/cities/:cityId/edit"
-            element={
-              <EditCity
-                cityData={cityData}
-                loading={loading}
-                refreshCities={refreshCities}
-              />
-            }
-          />
-
-          <Route
-            path="*"
-            element={
-              <section className="detail-page page-content">
-                <h1>Page Not Found</h1>
-                <Link to="/" className="back-link">
-                  Back to Dashboard
-                </Link>
-              </section>
-            }
-          />
-        </Routes>
-      </main>
+    <div className="loading-state" role="status">
+      <span className="spinner" />
+      <p>{message}</p>
     </div>
   );
 }
 
-// DASHBOARD
-
-function Dashboard({ cityData, loading, error }) {
-  const [search, setSearch] = useState("");
-  const [selectedRegion, setSelectedRegion] = useState("All Regions");
-
-  const regions = useMemo(
-    () => [
-      "All Regions",
-      ...new Set(cityData.map((city) => city.region)),
-    ],
-    [cityData]
-  );
-
-  const filteredCities = cityData.filter((city) => {
-    const matchesSearch =
-      city.name.toLowerCase().includes(search.toLowerCase()) ||
-      city.country.toLowerCase().includes(search.toLowerCase());
-
-    const matchesRegion =
-      selectedRegion === "All Regions" ||
-      city.region === selectedRegion;
-
-    return matchesSearch && matchesRegion;
-  });
-
-  const totalCities = cityData.length;
-  const totalCountries = new Set(cityData.map((city) => city.country)).size;
-  const totalRegions = new Set(cityData.map((city) => city.region)).size;
-
-  const regionCounts = regions
-    .filter((region) => region !== "All Regions")
-    .map((region) => ({
-      name: region,
-      count: cityData.filter((city) => city.region === region).length,
-    }));
-
-  const maxRegionCount = Math.max(
-    ...regionCounts.map((region) => region.count),
-    1
-  );
-
-  const summaryData = cityData
-    .filter((city) => city.summary)
-    .map((city) => ({
-      name: city.name,
-      wordCount: city.summary.trim().split(/\s+/).length,
-    }));
-
-  const maxWordCount = Math.max(
-    ...summaryData.map((city) => city.wordCount),
-    1
-  );
+function ErrorMessage({ children }) {
+  if (!children) return null;
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <div>
-          <p className="eyebrow">YOUR EUROPEAN TRAVEL GUIDE</p>
-          <h1>Western Europe Vacation Cities</h1>
-          <p>
-            Explore European destinations, discover interesting places, and
-            find inspiration for your next vacation.
-          </p>
-        </div>
+    <p className="error-message" role="alert">
+      {children}
+    </p>
+  );
+}
 
-        <Link to="/add" className="primary-button">
-          + Add a City
+/* NAVIGATION */
+
+
+function SiteHeader({ user }) {
+  return (
+    <header className="site-header">
+      <Link to="/" className="site-brand">
+        <span className="brand-icon">✦</span>
+        <strong>EuroExplore</strong>
+      </Link>
+
+      <nav className="site-nav" aria-label="Main navigation">
+        <NavLink to="/" end className={({ isActive }) =>
+          `site-nav-link${isActive ? " active" : ""}`
+        }>
+          Home
+        </NavLink>
+
+        <NavLink to="/destinations" className={({ isActive }) =>
+          `site-nav-link${isActive ? " active" : ""}`
+        }>
+          Destinations
+        </NavLink>
+
+        <NavLink to="/community" className={({ isActive }) =>
+          `site-nav-link${isActive ? " active" : ""}`
+        }>
+          Community
+        </NavLink>
+      </nav>
+
+      <div className="header-actions">
+        <span className="header-traveler">
+          {visitorName(user?.id)}
+        </span>
+
+        <Link to="/create" className="primary-button">
+          Create Post
         </Link>
-      </header>
+      </div>
+    </header>
+  );
+}
 
-      <section className="stats-grid">
-        <article className="stat-card">
-          <h2>Total Cities</h2>
-          <p className="stat-number">{totalCities}</p>
-          <p>Destinations to explore</p>
-        </article>
 
-        <article className="stat-card">
-          <h2>Countries</h2>
-          <p className="stat-number">{totalCountries}</p>
-          <p>Different countries represented</p>
-        </article>
+function PageLayout({ children }) {
+  return <main className="main-content">{children}</main>;
+}
 
-        <article className="stat-card">
-          <h2>European Regions</h2>
-          <p className="stat-number">{totalRegions}</p>
-          <p>Regions represented in the dataset</p>
-        </article>
-      </section>
 
-      <section className="charts-section">
-        <div className="section-heading">
-          <h2>Explore the Data</h2>
-          <p>Compare destinations and discover patterns across the dataset.</p>
+function HomePage({ cities, loading, error }) {
+  const featuredCities = cities.slice(0, 6);
+
+  return (
+    <div className="home-page">
+      <section className="home-hero">
+        <div className="hero-copy">
+          <p className="hero-eyebrow">
+            Your European escape begins here
+          </p>
+
+          <h1>
+            Somewhere between
+            <br />
+            here and <span>everywhere.</span>
+          </h1>
+
+          <p className="hero-description">
+            Discover beautiful places, find your next destination,
+            and make every journey unforgettable.
+          </p>
+
+          <div className="hero-actions">
+            <Link to="/destinations" className="primary-button">
+              Explore Europe →
+            </Link>
+          </div>
         </div>
 
-        <div className="charts-grid">
-          <article className="chart-card">
-            <h3>Cities by Region</h3>
-            <p className="chart-description">
-              Explore how the destinations are distributed across different
-              European regions.
-            </p>
+        <div className="hero-image">
+          <img src={HERO_IMAGE} alt="Beautiful European coastline" />
 
-            <div className="bar-chart">
-              {regionCounts.map((region) => (
-                <div className="bar-row" key={region.name}>
-                  <span className="bar-label">{region.name}</span>
-                  <div className="bar-track">
-                    <div
-                      className="bar-fill"
-                      style={{
-                        width: `${(region.count / maxRegionCount) * 100}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="bar-value">{region.count}</span>
+          <div className="hero-image-caption">
+            Your next adventure awaits
+          </div>
+        </div>
+      </section>
+
+      <section className="featured-destinations">
+        <div className="featured-heading">
+          <div>
+            <p className="eyebrow">A CONTINENT TO DISCOVER</p>
+            <h2>Find your somewhere.</h2>
+            <p>
+              From charming old towns to sunlit coastlines, explore
+              destinations across Europe.
+            </p>
+          </div>
+
+          <Link to="/destinations" className="text-link">
+            View all destinations →
+          </Link>
+        </div>
+
+        <ErrorMessage>{error}</ErrorMessage>
+
+        {loading ? (
+          <Loading message="Discovering destinations..." />
+        ) : featuredCities.length > 0 ? (
+          <div className="featured-grid">
+            {featuredCities.map((city) => (
+              <Link
+                to={`/cities/${city.id}`}
+                className="featured-card"
+                key={city.id}
+              >
+                <img
+                  src={city.image || FALLBACK_IMAGE}
+                  alt={city.name}
+                />
+
+                <div className="featured-card-content">
+                  <h3>{city.name}</h3>
+                  <p>{city.country}</p>
+                  <span className="text-link">
+                    Explore city →
+                  </span>
                 </div>
-              ))}
-            </div>
-          </article>
-
-          <article className="chart-card">
-            <h3>Wikipedia Summary Length</h3>
-            <p className="chart-description">
-              Compare the number of words in each city's Wikipedia summary.
-            </p>
-
-            {loading && <p>Loading summary data...</p>}
-
-            {!loading && summaryData.length === 0 && (
-              <p>Summary data is not available yet.</p>
-            )}
-
-            {!loading && summaryData.length > 0 && (
-              <div className="bar-chart">
-                {summaryData.map((city) => (
-                  <div className="bar-row" key={city.name}>
-                    <span className="bar-label">{city.name}</span>
-                    <div className="bar-track">
-                      <div
-                        className="bar-fill"
-                        style={{
-                          width: `${(city.wordCount / maxWordCount) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="bar-value">{city.wordCount}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </article>
-        </div>
-      </section>
-
-      <section className="dashboard-section">
-        <div className="section-heading">
-          <h2>Explore Destinations</h2>
-          <p>Search for a city or country, or filter destinations by region.</p>
-        </div>
-
-        <div className="filter-controls">
-          <input
-            type="text"
-            placeholder="Search cities or countries..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            aria-label="Search cities or countries"
-          />
-
-          <select
-            value={selectedRegion}
-            onChange={(event) => setSelectedRegion(event.target.value)}
-            aria-label="Filter cities by region"
-          >
-            {regions.map((region) => (
-              <option key={region} value={region}>
-                {region}
-              </option>
+              </Link>
             ))}
-          </select>
-
-          <button
-            type="button"
-            className="reset-button"
-            onClick={() => {
-              setSearch("");
-              setSelectedRegion("All Regions");
-            }}
-          >
-            Reset Filters
-          </button>
-        </div>
-
-        {error && <p className="error-message">{error}</p>}
-
-        {loading && <p>Loading European destinations...</p>}
-
-        {!loading && (
-          <>
-            <p className="results-count">
-              Showing {filteredCities.length} of {totalCities} cities
-              <span> · Sorted newest first</span>
-            </p>
-
-            <div className="city-grid">
-              {filteredCities.map((city) => (
-                <Link
-                  to={`/cities/${city.id}`}
-                  className="city-card"
-                  key={city.id}
-                >
-                  <img
-                    className="city-card-image"
-                    src={city.image || fallbackImage}
-                    alt={city.name}
-                  />
-
-                  <div className="city-card-content">
-                    <h3>{city.name}</h3>
-                    <p>{city.country}</p>
-                    <span className="region-badge">{city.region}</span>
-
-                    {city.description && (
-                      <p className="city-description">{city.description}</p>
-                    )}
-
-                    <span className="card-link">View City Details →</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {filteredCities.length === 0 && (
-              <p className="empty-message">
-                No cities match your search. Try changing your filters.
-              </p>
-            )}
-          </>
+          </div>
+        ) : (
+          <p className="empty-message">
+            Destinations are not available right now.
+          </p>
         )}
       </section>
     </div>
   );
 }
 
-// ADD CITY FORM
+/* COMMUNITY FEED */
 
-function CityForm({ title, refreshCities, existingCity }) {
+function PostCard({ post, showContent, showImages }) {
+  return (
+    <article className="post-card">
+      <Link to={`/posts/${post.id}`} className="post-card-main">
+        <div className="post-meta">
+          <span>{formatDate(post.created_at)}</span>
+        </div>
+
+        <h2>{post.title}</h2>
+
+        {showContent && post.content && (
+          <p className="post-preview">{post.content}</p>
+        )}
+
+        {showImages && post.image_url && (
+          <img className="feed-image" src={post.image_url} alt="" />
+        )}
+
+        <div className="post-card-footer">
+          <span className="upvote-count">
+            ▲ {post.upvotes || 0} upvotes
+          </span>
+        </div>
+      </Link>
+    </article>
+  );
+}
+
+function FeedPage({ posts, loading, error, refreshPosts }) {
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [category, setCategory] = useState("All Categories");
+  const [showContent, setShowContent] = useState(false);
+  const [showImages, setShowImages] = useState(false);
+
+  const filteredPosts = useMemo(() => {
+    const result = posts.filter((post) => {
+      const matchesSearch = post.title
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+      const matchesCategory =
+        category === "All Categories" || post.category === category;
+
+      return matchesSearch && matchesCategory;
+    });
+
+    return result.sort((a, b) => {
+      if (sort === "popular") {
+        return (b.upvotes || 0) - (a.upvotes || 0);
+      }
+
+      if (sort === "oldest") {
+        return new Date(a.created_at) - new Date(b.created_at);
+      }
+
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+  }, [posts, search, sort, category]);
+
+  return (
+    <section className="page-content">
+      <header className="page-header feed-header">
+        <div>
+          <p className="eyebrow">THE EUROEXPLORE COMMUNITY</p>
+          <h1>Travel Discussions</h1>
+          <p className="page-subtitle">
+            Share your experiences, ask questions, and find inspiration
+            for your next European adventure.
+          </p>
+        </div>
+
+        <Link to="/create" className="primary-button">
+          + Create Post
+        </Link>
+      </header>
+
+      <div className="feed-toolbar">
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search posts by title..."
+          aria-label="Search posts by title"
+        />
+
+        <select
+          value={sort}
+          onChange={(event) => setSort(event.target.value)}
+          aria-label="Sort posts"
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="popular">Most Upvoted</option>
+        </select>
+
+        <select
+          value={category}
+          onChange={(event) => setCategory(event.target.value)}
+          aria-label="Filter by category"
+        >
+          <option>All Categories</option>
+          {CATEGORIES.map((item) => (
+            <option key={item}>{item}</option>
+          ))}
+        </select>
+      </div>
+
+      <details className="feed-settings">
+        <summary>Customize feed</summary>
+
+        <div className="settings-options">
+          <label>
+            <input
+              type="checkbox"
+              checked={showContent}
+              onChange={(event) => setShowContent(event.target.checked)}
+            />
+            Show post text in feed
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              checked={showImages}
+              onChange={(event) => setShowImages(event.target.checked)}
+            />
+            Show images in feed
+          </label>
+        </div>
+      </details>
+
+      <div className="section-heading feed-section-heading">
+        <div>
+          <h2>Community Feed</h2>
+          <p>
+            {filteredPosts.length}{" "}
+            {filteredPosts.length === 1 ? "post" : "posts"} found
+          </p>
+        </div>
+      </div>
+
+      <ErrorMessage>{error}</ErrorMessage>
+
+      {loading ? (
+        <Loading message="Loading community posts..." />
+      ) : filteredPosts.length ? (
+        <div className="posts-list">
+          {filteredPosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              showContent={showContent}
+              showImages={showImages}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">
+          <span className="empty-icon">✦</span>
+          <h2>No posts found</h2>
+
+          <p>
+            {posts.length
+              ? "Try a different search or category filter."
+              : "Be the first traveler to start a discussion!"}
+          </p>
+
+          <Link to="/create" className="primary-button">
+            Create the First Post
+          </Link>
+        </div>
+      )}
+
+      <button
+        className="subtle-button refresh-button"
+        onClick={refreshPosts}
+      >
+        ↻ Refresh feed
+      </button>
+    </section>
+  );
+}
+
+/* CREATE AND EDIT POSTS */
+
+function PostForm({ user, existingPost, onSaved }) {
   const navigate = useNavigate();
 
-  const [name, setName] = useState(existingCity?.name || "");
-  const [country, setCountry] = useState(existingCity?.country || "");
-  const [region, setRegion] = useState(existingCity?.region || "");
-  const [image, setImage] = useState(existingCity?.image || "");
+  const [title, setTitle] = useState(existingPost?.title || "");
+  const [content, setContent] = useState(existingPost?.content || "");
+  const [imageUrl, setImageUrl] = useState(existingPost?.image_url || "");
+  const [videoUrl, setVideoUrl] = useState(existingPost?.video_url || "");
+  const [category, setCategory] = useState(
+    existingPost?.category || "Discussion"
+  );
+  const [repostId, setRepostId] = useState(existingPost?.repost_of || "");
+  const [imageFile, setImageFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setSaving(true);
-    setError("");
-
-    const city = {
-      name: name.trim(),
-      country: country.trim(),
-      region,
-      image: image.trim() || fallbackImage,
-    };
-
-    let result;
-
-    if (existingCity) {
-      result = await supabase
-        .from("cities")
-        .update(city)
-        .eq("id", existingCity.id)
-        .select()
-        .single();
-    } else {
-      result = await supabase
-        .from("cities")
-        .insert([city])
-        .select()
-        .single();
+  async function uploadImage() {
+    if (!imageFile) {
+      return imageUrl.trim() || null;
     }
 
-    if (result.error) {
-      setError(result.error.message);
-      setSaving(false);
+    const safeName = imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const filePath = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("post-images")
+      .upload(filePath, imageFile, { upsert: false });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from("post-images")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    if (!title.trim()) {
+      setError("Please enter a post title.");
       return;
     }
 
-    await refreshCities();
-    navigate(`/cities/${result.data.id}`);
+    setSaving(true);
+    setError("");
+
+    try {
+      const image = await uploadImage();
+
+      if (repostId.trim()) {
+        const { data: referencedPost, error: lookupError } = await supabase
+          .from("posts")
+          .select("id")
+          .eq("id", repostId.trim())
+          .maybeSingle();
+
+        if (lookupError) throw lookupError;
+
+        if (!referencedPost) {
+          throw new Error("We couldn't find a post with that ID.");
+        }
+      }
+
+      const values = {
+        title: title.trim(),
+        content: content.trim(),
+        image_url: image,
+        video_url: videoUrl.trim() || null,
+        category,
+        repost_of: repostId.trim() || null,
+      };
+
+      let result;
+
+      if (existingPost) {
+        result = await supabase
+          .from("posts")
+          .update(values)
+          .eq("id", existingPost.id)
+          .select()
+          .single();
+      } else {
+        result = await supabase
+          .from("posts")
+          .insert([{ ...values, author_id: user.id }])
+          .select()
+          .single();
+      }
+
+      if (result.error) throw result.error;
+
+      await onSaved();
+      navigate(`/posts/${result.data.id}`);
+    } catch (submitError) {
+      setError(
+        submitError.message || "Something went wrong while saving."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="page-content">
+    <section className="page-content narrow-page">
       <Link
-        to={existingCity ? `/cities/${existingCity.id}` : "/"}
+        to={existingPost ? `/posts/${existingPost.id}` : "/community"}
         className="back-link"
       >
         ← Back
@@ -454,280 +572,961 @@ function CityForm({ title, refreshCities, existingCity }) {
 
       <header className="page-header">
         <div>
-          <p className="eyebrow">EUROEXPLORE DESTINATIONS</p>
-          <h1>{title}</h1>
+          <p className="eyebrow">EUROEXPLORE COMMUNITY</p>
+          <h1>{existingPost ? "Edit Your Post" : "Create a Post"}</h1>
           <p className="page-subtitle">
-            {existingCity
-              ? "Update the information for this destination."
-              : "Add a new European destination to your collection."}
+            Share a travel story, ask a question, or help another traveler.
           </p>
         </div>
       </header>
 
-      <form className="city-form" onSubmit={handleSubmit}>
-        <label htmlFor="city-name">City Name</label>
+      <form className="form-card" onSubmit={handleSubmit}>
+        <label htmlFor="post-title">
+          Post Title <span className="required">*</span>
+        </label>
+
         <input
-          id="city-name"
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="e.g. Prague"
+          id="post-title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="What would you like to discuss?"
+          maxLength={150}
           required
         />
 
-        <label htmlFor="city-country">Country</label>
-        <input
-          id="city-country"
-          type="text"
-          value={country}
-          onChange={(event) => setCountry(event.target.value)}
-          placeholder="e.g. Czech Republic"
-          required
-        />
+        <label htmlFor="post-category">Category</label>
 
-        <label htmlFor="city-region">European Region</label>
         <select
-          id="city-region"
-          value={region}
-          onChange={(event) => setRegion(event.target.value)}
-          required
+          id="post-category"
+          value={category}
+          onChange={(event) => setCategory(event.target.value)}
         >
-          <option value="">Select a region</option>
-          <option value="Northern Europe">Northern Europe</option>
-          <option value="Western Europe">Western Europe</option>
-          <option value="Central Europe">Central Europe</option>
-          <option value="Southern Europe">Southern Europe</option>
-          <option value="Eastern Europe">Eastern Europe</option>
+          {CATEGORIES.map((item) => (
+            <option key={item}>{item}</option>
+          ))}
         </select>
 
-        <label htmlFor="city-image">Image URL (optional)</label>
-        <input
-          id="city-image"
-          type="url"
-          value={image}
-          onChange={(event) => setImage(event.target.value)}
-          placeholder="https://example.com/city-image.jpg"
+        <label htmlFor="post-content">
+          Additional Text <span className="optional">(optional)</span>
+        </label>
+
+        <textarea
+          id="post-content"
+          rows={7}
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          placeholder="Tell the community more..."
         />
 
-        {error && <p className="error-message">{error}</p>}
+        <label htmlFor="post-image-url">
+          Image URL <span className="optional">(optional)</span>
+        </label>
+
+        <input
+          id="post-image-url"
+          type="url"
+          value={imageUrl}
+          onChange={(event) => {
+            setImageUrl(event.target.value);
+            setImageFile(null);
+          }}
+          placeholder="https://example.com/your-image.jpg"
+        />
+
+        <label htmlFor="post-image-file">
+          Or upload an image from your device
+        </label>
+
+        <input
+          id="post-image-file"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          onChange={(event) => {
+            setImageFile(event.target.files?.[0] || null);
+
+            if (event.target.files?.[0]) {
+              setImageUrl("");
+            }
+          }}
+        />
+
+        {imageFile && (
+          <p className="field-hint">Selected: {imageFile.name}</p>
+        )}
+
+        <label htmlFor="post-video">
+          Video URL <span className="optional">(YouTube or Vimeo)</span>
+        </label>
+
+        <input
+          id="post-video"
+          type="url"
+          value={videoUrl}
+          onChange={(event) => setVideoUrl(event.target.value)}
+          placeholder="https://www.youtube.com/watch?v=..."
+        />
+
+        <label htmlFor="repost-id">
+          Reference Another Post ID{" "}
+          <span className="optional">(optional)</span>
+        </label>
+
+        <input
+          id="repost-id"
+          value={repostId}
+          onChange={(event) => setRepostId(event.target.value)}
+          placeholder="Paste the ID of an existing post"
+        />
+
+        <p className="field-hint">
+          You can find a post ID in its details page or browser address.
+        </p>
+
+        <ErrorMessage>{error}</ErrorMessage>
 
         <button
-          type="submit"
           className="primary-button form-submit"
           disabled={saving}
         >
-          {saving ? "Saving..." : existingCity ? "Save Changes" : "Add City"}
+          {saving
+            ? "Saving Post..."
+            : existingPost
+              ? "Save Changes"
+              : "Publish Post"}
         </button>
       </form>
-    </div>
+    </section>
   );
 }
 
-// EDIT CITY PAGE
+/* COMMENTS */
 
-function EditCity({ cityData, loading, refreshCities }) {
-  const { cityId } = useParams();
-  const city = cityData.find((item) => String(item.id) === cityId);
-  const navigate = useNavigate();
+function CommentSection({ postId, user }) {
+  const [comments, setComments] = useState([]);
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  async function deleteCity() {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${city.name}?`
-    );
+  const loadComments = useCallback(async () => {
+    setLoading(true);
 
-    if (!confirmed) return;
+    const { data, error: queryError } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true });
 
-    const { error } = await supabase
-      .from("cities")
-      .delete()
-      .eq("id", city.id);
-
-    if (error) {
-      alert(error.message);
-      return;
+    if (queryError) {
+      setError(queryError.message);
+    } else {
+      setComments(data || []);
     }
 
-    await refreshCities();
-    navigate("/");
+    setLoading(false);
+  }, [postId]);
+
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
+
+  async function submitComment(event) {
+    event.preventDefault();
+
+    if (!content.trim()) return;
+
+    setSaving(true);
+    setError("");
+
+    const { error: insertError } = await supabase
+      .from("comments")
+      .insert([
+        {
+          post_id: postId,
+          content: content.trim(),
+          author_id: user.id,
+        },
+      ]);
+
+    if (insertError) {
+      setError(insertError.message);
+    } else {
+      setContent("");
+      await loadComments();
+    }
+
+    setSaving(false);
   }
 
-  if (loading && !city) return <p className="page-content">Loading...</p>;
+  async function deleteComment(commentId) {
+    if (!window.confirm("Delete this comment?")) return;
 
-  if (!city) {
-    return (
-      <div className="page-content">
-        <h1>City Not Found</h1>
-        <Link to="/" className="back-link">Back to Dashboard</Link>
-      </div>
-    );
+    const { error: deleteError } = await supabase
+      .from("comments")
+      .delete()
+      .eq("id", commentId);
+
+    if (deleteError) {
+      setError(deleteError.message);
+    } else {
+      await loadComments();
+    }
   }
 
   return (
-    <div className="page-content">
-      <CityForm
-        title={`Edit ${city.name}`}
-        existingCity={city}
-        refreshCities={refreshCities}
-      />
-
-      <div className="delete-section">
-        <h2>Delete Destination</h2>
-        <p>This will permanently remove this city from your collection.</p>
-        <button type="button" className="delete-button" onClick={deleteCity}>
-          Delete {city.name}
-        </button>
+    <section className="comments-section">
+      <div className="section-heading">
+        <div>
+          <h2>Discussion</h2>
+          <p>
+            {comments.length}{" "}
+            {comments.length === 1 ? "comment" : "comments"}
+          </p>
+        </div>
       </div>
-    </div>
+
+      <form className="comment-form" onSubmit={submitComment}>
+        <textarea
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          placeholder="Share your thoughts..."
+          rows={3}
+          required
+        />
+
+        <button
+          className="primary-button"
+          disabled={saving || !content.trim()}
+        >
+          {saving ? "Posting..." : "Add Comment"}
+        </button>
+      </form>
+
+      <ErrorMessage>{error}</ErrorMessage>
+
+      {loading ? (
+        <Loading message="Loading comments..." />
+      ) : comments.length ? (
+        <div className="comments-list">
+          {comments.map((comment) => (
+            <article className="comment-card" key={comment.id}>
+              <div className="comment-heading">
+                <strong>{visitorName(comment.author_id)}</strong>
+                <span>{formatDate(comment.created_at)}</span>
+              </div>
+
+              <p>{comment.content}</p>
+
+              {comment.author_id === user.id && (
+                <button
+                  className="danger-text"
+                  onClick={() => deleteComment(comment.id)}
+                >
+                  Delete comment
+                </button>
+              )}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="empty-message">
+          No comments yet. Start the conversation!
+        </p>
+      )}
+    </section>
   );
 }
 
-// CITY DETAIL PAGE
+/* POST DETAILS */
 
-function CityDetail({ cityData, loading }) {
-  const { cityId } = useParams();
-  const city = cityData.find((item) => String(item.id) === cityId);
+function PostDetail({ posts, postsLoading, user, refreshPosts }) {
+  const { postId } = useParams();
+  const navigate = useNavigate();
 
-  if (loading && !city) {
-    return <section className="detail-page page-content">Loading city information...</section>;
+  const post = posts.find((item) => item.id === postId);
+
+  const [upvoting, setUpvoting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function upvote() {
+    if (!post) return;
+
+    setUpvoting(true);
+    setError("");
+
+    const { error: voteError } = await supabase.rpc(
+      "increment_post_upvotes",
+      { post_id_input: post.id }
+    );
+
+    if (voteError) {
+      setError(voteError.message);
+    } else {
+      await refreshPosts();
+    }
+
+    setUpvoting(false);
   }
 
-  if (!city) {
+  async function deletePost() {
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this post?"
+      )
+    ) {
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from("posts")
+      .delete()
+      .eq("id", post.id);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    await refreshPosts();
+    navigate("/community");
+  }
+
+  if (postsLoading && !post) {
+    return <Loading message="Loading post..." />;
+  }
+
+  if (!post) {
     return (
-      <section className="detail-page page-content">
-        <h1>City Not Found</h1>
-        <p>We couldn't find that destination.</p>
-        <Link to="/" className="back-link">← Back to Dashboard</Link>
+      <section className="page-content">
+        <h1>Post Not Found</h1>
+        <p className="page-subtitle">
+          This post may have been deleted.
+        </p>
+        <Link to="/community" className="back-link">
+          ← Back to Community
+        </Link>
       </section>
     );
   }
 
-  const wordCount = city.summary
-    ? city.summary.trim().split(/\s+/).length
-    : 0;
+  const referencedPost = posts.find(
+    (item) => item.id === post.repost_of
+  );
 
-  const relatedCities = cityData.filter(
+  const videoEmbed = getVideoEmbed(post.video_url);
+  const isOwner = post.author_id === user.id;
+
+  return (
+    <section className="page-content">
+      <Link to="/community" className="back-link">
+        ← Back to Community
+      </Link>
+
+      <article className="detail-post">
+        <div className="post-meta">
+          <span className="category-badge">{post.category}</span>
+          <span>{formatDate(post.created_at)}</span>
+        </div>
+
+        <h1>{post.title}</h1>
+
+        <p className="post-author-line">
+          Posted by {visitorName(post.author_id)}
+        </p>
+
+        {post.content && (
+          <p className="detail-post-content">{post.content}</p>
+        )}
+
+        {post.image_url && (
+          <img
+            className="detail-post-image"
+            src={post.image_url}
+            alt="Post attachment"
+          />
+        )}
+
+        {post.video_url &&
+          (videoEmbed ? (
+            <div className="video-wrapper">
+              <iframe
+                src={videoEmbed}
+                title="Shared video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          ) : (
+            <a
+              className="text-link"
+              href={post.video_url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Watch shared video ↗
+            </a>
+          ))}
+
+        {post.repost_of && (
+          <div className="repost-box">
+            <p className="eyebrow">REFERENCED POST</p>
+
+            {referencedPost ? (
+              <Link to={`/posts/${referencedPost.id}`}>
+                <strong>{referencedPost.title}</strong>
+                <span>Open original discussion →</span>
+              </Link>
+            ) : (
+              <p>The referenced post is no longer available.</p>
+            )}
+          </div>
+        )}
+
+        <div className="detail-post-actions">
+          <button
+            className="upvote-button"
+            onClick={upvote}
+            disabled={upvoting}
+          >
+            ▲{" "}
+            {upvoting
+              ? "Upvoting..."
+              : `Upvote · ${post.upvotes || 0}`}
+          </button>
+
+          {isOwner && (
+            <div className="owner-actions">
+              <Link
+                to={`/posts/${post.id}/edit`}
+                className="secondary-button"
+              >
+                Edit Post
+              </Link>
+
+              <button
+                className="delete-button"
+                onClick={deletePost}
+              >
+                Delete Post
+              </button>
+            </div>
+          )}
+        </div>
+
+        <ErrorMessage>{error}</ErrorMessage>
+      </article>
+
+      <CommentSection postId={post.id} user={user} />
+    </section>
+  );
+}
+
+function CreatePost({ user, refreshPosts }) {
+  return <PostForm user={user} onSaved={refreshPosts} />;
+}
+
+function EditPost({ user, posts, postsLoading, refreshPosts }) {
+  const { postId } = useParams();
+  const post = posts.find((item) => item.id === postId);
+
+  if (postsLoading && !post) {
+    return <Loading message="Loading post..." />;
+  }
+
+  if (!post) {
+    return (
+      <section className="page-content">
+        <h1>Post Not Found</h1>
+        <Link to="/community" className="back-link">
+          ← Back to Community
+        </Link>
+      </section>
+    );
+  }
+
+  if (post.author_id !== user.id) {
+    return (
+      <section className="page-content">
+        <h1>You can't edit this post</h1>
+        <p className="page-subtitle">
+          Only the original author can edit it.
+        </p>
+        <Link to={`/posts/${post.id}`} className="back-link">
+          ← Return to Post
+        </Link>
+      </section>
+    );
+  }
+
+  return (
+    <PostForm
+      user={user}
+      existingPost={post}
+      onSaved={refreshPosts}
+    />
+  );
+}
+
+/* DESTINATIONS */
+
+function DestinationsPage({ cities, loading, error }) {
+  const [search, setSearch] = useState("");
+  const [region, setRegion] = useState("All Regions");
+
+  const regions = [
+    ...new Set(cities.map((city) => city.region).filter(Boolean)),
+  ];
+
+  const filteredCities = cities.filter((city) => {
+    const matchesSearch =
+      city.name.toLowerCase().includes(search.toLowerCase()) ||
+      (city.country || "").toLowerCase().includes(search.toLowerCase());
+
+    return (
+      matchesSearch &&
+      (region === "All Regions" || city.region === region)
+    );
+  });
+
+  return (
+    <section className="page-content">
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">EXPLORE EUROPE</p>
+          <h1>European Destinations</h1>
+          <p className="page-subtitle">
+            Browse the cities in your travel collection and discover
+            somewhere new.
+          </p>
+        </div>
+      </header>
+
+      <div className="feed-toolbar">
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search cities or countries..."
+          aria-label="Search cities or countries"
+        />
+
+        <select
+          value={region}
+          onChange={(event) => setRegion(event.target.value)}
+          aria-label="Filter by region"
+        >
+          <option>All Regions</option>
+          {regions.map((item) => (
+            <option key={item}>{item}</option>
+          ))}
+        </select>
+      </div>
+
+      <ErrorMessage>{error}</ErrorMessage>
+
+      {loading ? (
+        <Loading message="Loading destinations..." />
+      ) : (
+        <div className="destination-grid">
+          {filteredCities.map((city) => (
+            <Link
+              to={`/cities/${city.id}`}
+              className="destination-card"
+              key={city.id}
+            >
+              <img
+                src={city.image || FALLBACK_IMAGE}
+                alt={city.name}
+              />
+
+              <div>
+                <span className="category-badge">{city.region}</span>
+                <h2>{city.name}</h2>
+                <p>{city.country}</p>
+
+                {city.description && (
+                  <p className="destination-description">
+                    {city.description}
+                  </p>
+                )}
+
+                <span className="text-link">
+                  Explore city →
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {!loading && filteredCities.length === 0 && (
+        <p className="empty-message">
+          No destinations match your search.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function CityDetail({ cities, loading }) {
+  const { cityId } = useParams();
+
+  const city = cities.find(
+    (item) => String(item.id) === cityId
+  );
+
+  if (loading && !city) {
+    return <Loading message="Loading destination..." />;
+  }
+
+  if (!city) {
+    return (
+      <section className="page-content">
+        <h1>Destination Not Found</h1>
+        <Link to="/destinations" className="back-link">
+          ← Back to Destinations
+        </Link>
+      </section>
+    );
+  }
+
+  const related = cities.filter(
     (item) => item.region === city.region && item.id !== city.id
   );
 
   return (
-    <div className="detail-page page-content">
-      <Link to="/" className="back-link">← Back to Dashboard</Link>
+    <section className="page-content">
+      <Link to="/destinations" className="back-link">
+        ← Back to Destinations
+      </Link>
 
-      <header className="detail-header">
-        <p className="eyebrow">DESTINATION DETAILS</p>
-        <h1>{city.name}</h1>
-        <p>{city.country} · {city.region}</p>
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">DESTINATION GUIDE</p>
+          <h1>{city.name}</h1>
+          <p className="page-subtitle">
+            {city.country} · {city.region}
+          </p>
+        </div>
       </header>
 
       <img
-        className="detail-image"
-        src={city.image || fallbackImage}
+        className="city-detail-image"
+        src={city.image || FALLBACK_IMAGE}
         alt={city.name}
       />
 
-      <section className="detail-card">
+      <article className="detail-post">
         <h2>About {city.name}</h2>
 
         {city.description && <p>{city.description}</p>}
 
         <p>
-          {city.summary ||
-            "A Wikipedia summary for this destination is not currently available."}
+          {city.summary || "A summary is not currently available."}
         </p>
 
         <a
-          href={city.wikipediaUrl || getWikipediaUrl(city.name)}
+          className="text-link"
+          href={city.wikipediaUrl}
           target="_blank"
           rel="noreferrer"
-          className="wikipedia-link"
         >
           Read more on Wikipedia ↗
         </a>
-      </section>
+      </article>
 
-      <section className="stats-grid detail-stats">
-        <article className="stat-card">
-          <h2>Country</h2>
-          <p className="detail-stat-value">{city.country}</p>
-        </article>
-
-        <article className="stat-card">
-          <h2>Region</h2>
-          <p className="detail-stat-value">{city.region}</p>
-        </article>
-
-        <article className="stat-card">
-          <h2>Summary Length</h2>
-          <p className="stat-number">{wordCount}</p>
-          <p>Words in the Wikipedia summary</p>
-        </article>
-      </section>
-
-      <Link to={`/cities/${city.id}/edit`} className="primary-button">
-        Edit Destination
-      </Link>
-
-      {relatedCities.length > 0 && (
+      {related.length > 0 && (
         <section className="related-section">
-          <h2>Explore More in {city.region}</h2>
-          <p>Discover other destinations in the same region.</p>
+          <h2>More in {city.region}</h2>
 
           <div className="related-cities">
-            {relatedCities.map((relatedCity) => (
+            {related.map((item) => (
               <Link
-                to={`/cities/${relatedCity.id}`}
+                key={item.id}
+                to={`/cities/${item.id}`}
                 className="related-city-link"
-                key={relatedCity.id}
               >
-                {relatedCity.name} →
+                {item.name} →
               </Link>
             ))}
           </div>
         </section>
       )}
+    </section>
+  );
+}
+
+/* APP ROUTES */
+
+function AppContent({
+  user,
+  posts,
+  postsLoading,
+  postsError,
+  refreshPosts,
+  cities,
+  citiesLoading,
+  citiesError,
+}) {
+  return (
+    <div className="app-layout">
+      <SiteHeader user={user} />
+
+      <PageLayout>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HomePage
+                cities={cities}
+                loading={citiesLoading}
+                error={citiesError}
+              />
+            }
+          />
+
+          <Route
+            path="/community"
+            element={
+              <FeedPage
+                posts={posts}
+                loading={postsLoading}
+                error={postsError}
+                refreshPosts={refreshPosts}
+              />
+            }
+          />
+
+          <Route
+            path="/create"
+            element={
+              <CreatePost
+                user={user}
+                refreshPosts={refreshPosts}
+              />
+            }
+          />
+
+          <Route
+            path="/posts/:postId"
+            element={
+              <PostDetail
+                posts={posts}
+                postsLoading={postsLoading}
+                user={user}
+                refreshPosts={refreshPosts}
+              />
+            }
+          />
+
+          <Route
+            path="/posts/:postId/edit"
+            element={
+              <EditPost
+                user={user}
+                posts={posts}
+                postsLoading={postsLoading}
+                refreshPosts={refreshPosts}
+              />
+            }
+          />
+
+          <Route
+            path="/destinations"
+            element={
+              <DestinationsPage
+                cities={cities}
+                loading={citiesLoading}
+                error={citiesError}
+              />
+            }
+          />
+
+          <Route
+            path="/cities/:cityId"
+            element={
+              <CityDetail
+                cities={cities}
+                loading={citiesLoading}
+              />
+            }
+          />
+
+          <Route
+            path="*"
+            element={
+              <section className="page-content">
+                <h1>Page Not Found</h1>
+                <Link to="/" className="back-link">
+                  ← Back to Home
+                </Link>
+              </section>
+            }
+          />
+        </Routes>
+      </PageLayout>
     </div>
   );
 }
 
-// MAIN APP AND SUPABASE DATA
+/* MAIN APP */
 
 function App() {
-  const [cityData, setCityData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
+
+  const [posts, setPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [postsError, setPostsError] = useState("");
+
+  const [cities, setCities] = useState([]);
+  const [citiesLoading, setCitiesLoading] = useState(true);
+  const [citiesError, setCitiesError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function initializeUser() {
+      setAuthLoading(true);
+      setAuthError("");
+
+      const { data, error: sessionError } =
+        await supabase.auth.getSession();
+
+      if (sessionError) {
+        if (mounted) {
+          setAuthError(sessionError.message);
+          setAuthLoading(false);
+        }
+        return;
+      }
+
+      if (data.session?.user) {
+        if (mounted) {
+          setUser(data.session.user);
+          setAuthLoading(false);
+        }
+        return;
+      }
+
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInAnonymously();
+
+      if (!mounted) return;
+
+      if (signInError) {
+        setAuthError(
+          `${signInError.message} Make sure Anonymous Sign-Ins are enabled in Supabase Authentication settings.`
+        );
+      } else {
+        setUser(signInData.user);
+      }
+
+      setAuthLoading(false);
+    }
+
+    initializeUser();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (mounted && session?.user) {
+          setUser(session.user);
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const refreshPosts = useCallback(async () => {
+    setPostsLoading(true);
+    setPostsError("");
+
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      setPostsError(error.message);
+      setPosts([]);
+    } else {
+      setPosts(data || []);
+    }
+
+    setPostsLoading(false);
+  }, []);
 
   const refreshCities = useCallback(async () => {
-    setLoading(true);
-    setError("");
+    setCitiesLoading(true);
+    setCitiesError("");
 
-    const { data, error: databaseError } = await supabase
+    const { data, error } = await supabase
       .from("cities")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (databaseError) {
-      setError(databaseError.message);
-      setLoading(false);
+    if (error) {
+      setCitiesError(error.message);
+      setCities([]);
+      setCitiesLoading(false);
       return;
     }
 
-    const citiesWithWikipedia = await addWikipediaInformation(data || []);
+    const enriched = await getWikipediaInformation(data || []);
 
-    setCityData(citiesWithWikipedia);
-    setLoading(false);
+    setCities(enriched);
+    setCitiesLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    refreshPosts();
+  }, [user, refreshPosts]);
 
   useEffect(() => {
     refreshCities();
   }, [refreshCities]);
 
+  if (authLoading) {
+    return <Loading message="Preparing your travel community..." />;
+  }
+
+  if (authError || !user) {
+    return (
+      <div className="auth-error-screen">
+        <h1>Welcome to EuroExplore</h1>
+        <p>We couldn't start your community session.</p>
+
+        <ErrorMessage>
+          {authError || "No visitor session is available."}
+        </ErrorMessage>
+
+        <button
+          className="primary-button"
+          onClick={() => window.location.reload()}
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
-      <AppLayout
-        cityData={cityData}
-        loading={loading}
-        error={error}
-        refreshCities={refreshCities}
+      <AppContent
+        user={user}
+        posts={posts}
+        postsLoading={postsLoading}
+        postsError={postsError}
+        refreshPosts={refreshPosts}
+        cities={cities}
+        citiesLoading={citiesLoading}
+        citiesError={citiesError}
       />
     </BrowserRouter>
   );
