@@ -73,10 +73,6 @@ The following **additional** features are implemented:
 - [x] Supabase database integration for storing posts, comments, and destinations.
 - [x] Supabase Storage integration for uploaded post images.
 
-## Video Walkthrough
-
-Here's a walkthrough of implemented user stories:
-
 <img src='' title='Video Walkthrough' width='' alt='Video Walkthrough' />
 
 ## Notes
