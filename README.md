@@ -73,8 +73,6 @@ The following **additional** features are implemented:
 - [x] Supabase database integration for storing posts, comments, and destinations.
 - [x] Supabase Storage integration for uploaded post images.
 
-<img src='' title='Video Walkthrough' width='' alt='Video Walkthrough' />
-
 ## Notes
 
 One of the main challenges encountered while building EuroExplore was integrating the community posting features with the destination discovery experience. Connecting React components to Supabase required managing database operations, user authentication, image uploads, and post.
